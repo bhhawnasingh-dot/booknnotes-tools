@@ -1,0 +1,527 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Word to PDF Converter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.5.1/mammoth.browser.min.js"></script>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 800px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 40px;
+            font-size: 1.1rem;
+        }
+
+        .upload-area {
+            border: 3px dashed #3498db;
+            border-radius: 15px;
+            padding: 60px 30px;
+            margin: 30px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8fafc;
+        }
+
+        .upload-area:hover {
+            background: #e8f4fc;
+            border-color: #2980b9;
+        }
+
+        .upload-area.highlight {
+            border-color: #2ecc71;
+            background: #eafaf1;
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            color: #3498db;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 1.3rem;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            color: #7f8c8d;
+            font-size: 1rem;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .file-info {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 25px 0;
+            text-align: left;
+            display: none;
+        }
+
+        .file-info.show {
+            display: block;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #2c3e50;
+            word-break: break-all;
+            margin-bottom: 5px;
+        }
+
+        .file-size {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 16px 32px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            min-width: 200px;
+        }
+
+        .convert-btn {
+            background: linear-gradient(to right, #3498db, #2980b9);
+            color: white;
+        }
+
+        .convert-btn:hover:not(:disabled) {
+            background: linear-gradient(to right, #2980b9, #2573a7);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(41, 128, 185, 0.3);
+        }
+
+        .convert-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .download-btn {
+            background: linear-gradient(to right, #2ecc71, #27ae60);
+            color: white;
+            display: none;
+        }
+
+        .download-btn:hover {
+            background: linear-gradient(to right, #27ae60, #219653);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.3);
+        }
+
+        .message {
+            padding: 20px;
+            border-radius: 10px;
+            margin: 25px 0;
+            font-weight: 500;
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3498db;
+            animation: spin 1s linear infinite;
+            display: none;
+            margin: 20px auto;
+        }
+
+        .spinner.active {
+            display: block;
+        }
+
+        .preview-container {
+            display: none;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .preview-container.show {
+            display: block;
+        }
+
+        .preview-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        #contentPreview {
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            background: #f9f9f9;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        footer {
+            margin-top: 40px;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 25px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            button {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Word to PDF Converter</h1>
+        <p class="subtitle">Convert your Word documents to PDF instantly in your browser - 100% free</p>
+        
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📄</div>
+            <div class="upload-text">Drop your Word file here or click to browse</div>
+            <div class="upload-subtext">Supports .doc and .docx files (Max: 10MB)</div>
+            <input type="file" id="fileInput" accept=".doc,.docx">
+        </div>
+        
+        <div class="file-info" id="fileInfo">
+            <div class="file-name" id="fileName"></div>
+            <div class="file-size" id="fileSize"></div>
+        </div>
+
+        <div class="preview-container" id="previewContainer">
+            <div class="preview-title">Content Preview:</div>
+            <div id="contentPreview"></div>
+        </div>
+        
+        <div class="spinner" id="spinner"></div>
+        
+        <div class="message" id="message"></div>
+        
+        <div class="controls">
+            <button class="convert-btn" id="convertBtn" disabled>
+                <span>🔄</span>
+                Convert to PDF
+            </button>
+            <button class="download-btn" id="downloadBtn">
+                <span>📥</span>
+                Download PDF
+            </button>
+        </div>
+        
+        <footer>
+            <p>All conversion happens in your browser. Your files are never uploaded to any server.</p>
+            <p>Works offline • No registration required • 100% secure</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.getElementById('fileInput');
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInfo = document.getElementById('fileInfo');
+            const fileName = document.getElementById('fileName');
+            const fileSize = document.getElementById('fileSize');
+            const convertBtn = document.getElementById('convertBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const message = document.getElementById('message');
+            const spinner = document.getElementById('spinner');
+            const previewContainer = document.getElementById('previewContainer');
+            const contentPreview = document.getElementById('contentPreview');
+            
+            let selectedFile = null;
+            let pdfData = null;
+            let extractedHTML = '';
+
+            // Upload area click handler
+            uploadArea.addEventListener('click', () => fileInput.click());
+            
+            // Drag and drop handlers
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, unhighlight, false);
+            });
+            
+            function highlight() {
+                uploadArea.classList.add('highlight');
+            }
+            
+            function unhighlight() {
+                uploadArea.classList.remove('highlight');
+            }
+            
+            uploadArea.addEventListener('drop', handleDrop, false);
+            
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                if (files.length > 0) {
+                    handleFile(files[0]);
+                }
+            }
+            
+            // File input change handler
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFile(e.target.files[0]);
+                }
+            });
+            
+            async function handleFile(file) {
+                // Check file type
+                const validTypes = [
+                    'application/msword',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                ];
+                
+                if (!validTypes.includes(file.type) && 
+                    !file.name.match(/\.(doc|docx)$/i)) {
+                    showMessage('Please select a valid Word file (.doc or .docx)', 'error');
+                    return;
+                }
+                
+                // Check file size (10MB limit)
+                if (file.size > 10 * 1024 * 1024) {
+                    showMessage('File size must be less than 10MB', 'error');
+                    return;
+                }
+                
+                selectedFile = file;
+                fileName.textContent = file.name;
+                fileSize.textContent = formatFileSize(file.size);
+                fileInfo.classList.add('show');
+                convertBtn.disabled = false;
+                
+                // Extract and preview content
+                try {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const result = await mammoth.extractRawText({arrayBuffer: arrayBuffer});
+                    extractedHTML = result.value;
+                    
+                    // Display preview (first 1000 characters)
+                    const previewText = extractedHTML.length > 1000 
+                        ? extractedHTML.substring(0, 1000) + '...' 
+                        : extractedHTML;
+                    contentPreview.innerHTML = previewText.replace(/\n/g, '<br>');
+                    previewContainer.classList.add('show');
+                    
+                    showMessage('File loaded successfully! Click "Convert to PDF" to proceed.', 'info');
+                } catch (error) {
+                    console.error('Preview error:', error);
+                    showMessage('File loaded. Ready for conversion.', 'info');
+                }
+            }
+            
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+            
+            // Convert button handler
+            convertBtn.addEventListener('click', convertToPDF);
+            
+            async function convertToPDF() {
+                if (!selectedFile) return;
+                
+                spinner.classList.add('active');
+                convertBtn.disabled = true;
+                message.style.display = 'none';
+                
+                try {
+                    const arrayBuffer = await selectedFile.arrayBuffer();
+                    
+                    // Extract text using mammoth
+                    const result = await mammoth.extractRawText({arrayBuffer: arrayBuffer});
+                    const text = result.value;
+                    
+                    // Create PDF using jsPDF
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF();
+                    
+                    // Set margins and page dimensions
+                    const margin = 20;
+                    const pageWidth = pdf.internal.pageSize.getWidth();
+                    const pageHeight = pdf.internal.pageSize.getHeight();
+                    const maxWidth = pageWidth - (margin * 2);
+                    
+                    // Split text into lines
+                    const lines = pdf.splitTextToSize(text, maxWidth);
+                    
+                    let y = margin;
+                    const lineHeight = 7;
+                    const pageBottom = pageHeight - margin;
+                    
+                    // Add text to PDF
+                    for (let i = 0; i < lines.length; i++) {
+                        if (y > pageBottom) {
+                            pdf.addPage();
+                            y = margin;
+                        }
+                        
+                        pdf.text(lines[i], margin, y);
+                        y += lineHeight;
+                    }
+                    
+                    // Add filename and conversion date to footer
+                    pdf.setFontSize(10);
+                    pdf.setTextColor(128, 128, 128);
+                    pdf.text(`Converted from: ${selectedFile.name}`, margin, pageBottom + 10);
+                    pdf.text(`Converted on: ${new Date().toLocaleDateString()}`, margin, pageBottom + 16);
+                    
+                    // Generate PDF blob
+                    const pdfBlob = pdf.output('blob');
+                    pdfData = pdfBlob;
+                    
+                    // Show success message
+                    showMessage('✅ Conversion successful! Your PDF is ready to download.', 'success');
+                    
+                    // Show download button
+                    downloadBtn.style.display = 'flex';
+                    
+                } catch (error) {
+                    console.error('Conversion error:', error);
+                    showMessage('Conversion failed. Please try a different file or check the file format.', 'error');
+                } finally {
+                    spinner.classList.remove('active');
+                    convertBtn.disabled = false;
+                }
+            }
+            
+            // Download button handler
+            downloadBtn.addEventListener('click', () => {
+                if (!pdfData) return;
+                
+                const url = URL.createObjectURL(pdfData);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = selectedFile.name.replace(/\.[^/.]+$/, "") + '.pdf';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+            
+            function showMessage(text, type) {
+                message.textContent = text;
+                message.className = `message ${type}`;
+                message.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
+```
